@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: inside_cancun_app
+    working_dir: /var/www/html
+    volumes:
+      - ../backend:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - inside_cancun
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: inside_cancun_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ../backend:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - inside_cancun
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: inside_cancun_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-inside_cancun}
+      POSTGRES_USER: ${DB_USERNAME:-inside_cancun}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - inside_cancun_pgdata:/var/lib/postgresql/data
+    networks:
+      - inside_cancun
+
+  redis:
+    image: redis:7-alpine
+    container_name: inside_cancun_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - inside_cancun
+
+networks:
+  inside_cancun:
+    driver: bridge
+
+volumes:
+  inside_cancun_pgdata:
+    driver: local
